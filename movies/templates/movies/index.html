@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>영화 목록</h1>
+
+<div class="mb-4">
+  <label for="genre-select">장르 선택: </label>
+  <select id="genre-select" class="form-select w-25 d-inline-block">
+    <option value="">모든 장르</option>
+    {% for genre in genres %}
+      <option value="{{ genre.pk }}">{{ genre.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<hr>
+
+<div class="row" id="movie-container">
+  {% for movie in movies %}
+    <div class="col-4 mb-3 movie-card">
+      <div class="card h-100">
+        <img src="{{ movie.poster_path }}" class="card-img-top" alt="{{ movie.title }}">
+        <div class="card-body">
+          <h5 class="card-title">{{ movie.title }}</h5>
+          <p class="card-text">평점: {{ movie.vote_average }}</p>
+          <p class="card-text text-truncate">{{ movie.overview }}</p>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+  const genreSelect = document.querySelector('#genre-select')
+  const movieContainer = document.querySelector('#movie-container')
+
+  // 장르 선택 값이 바뀌면 실행
+  genreSelect.addEventListener('change', function (event) {
+    const genreId = event.target.value
+    
+    // 비동기 요청 보내기
+    axios({
+      method: 'get',
+      url: '/movies/filter-genre/',
+      params: {
+        'genre_id': genreId
+      }
+    })
+    .then((response) => {
+      const movies = response.data.movies
+      
+      // 기존 영화 목록 비우기
+      movieContainer.innerHTML = ''
+
+      // 받아온 데이터로 새로운 카드 만들기
+      movies.forEach(movie => {
+        const divCol = document.createElement('div')
+        divCol.classList.add('col-4', 'mb-3', 'movie-card')
+        
+        divCol.innerHTML = `
+          <div class="card h-100">
+            <img src="${movie.poster_path}" class="card-img-top" alt="${movie.title}">
+            <div class="card-body">
+              <h5 class="card-title">${movie.title}</h5>
+              <p class="card-text">평점: ${movie.vote_average}</p>
+              <p class="card-text text-truncate">${movie.overview}</p>
+            </div>
+          </div>
+        `
+        movieContainer.appendChild(divCol)
+      })
+    })
+    .catch((error) => {
+      console.log(error)
+    })
+  })
+</script>
+{% endblock %}

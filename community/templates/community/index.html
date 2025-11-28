@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Community</h1>
+<hr>
+{% for review in reviews %}
+  <p>작성자: <a href="{% url 'accounts:profile' review.user.username %}">{{ review.user }}</a></p>
+  <p>글 번호: {{ review.pk }}</p>
+  <p>글 제목: {{ review.title }}</p>
+  <p>글 내용: {{ review.content }}</p>
+  
+  <!-- ✅ Form ID와 data 속성 정확히 -->
+  <form id="like-form-{{ review.pk }}" data-review-pk="{{ review.pk }}" method="POST">
+    {% csrf_token %}
+    {% if request.user in review.like_users.all %}
+      <input type="submit" value="좋아요 취소">
+    {% else %}
+      <input type="submit" value="좋아요">
+    {% endif %}
+  </form>
+  
+  <!-- ✅ 좋아요 수 span에 ID 추가 -->
+  <p>
+    <span id="like-count-{{ review.pk }}">({{ review.like_users.all|length }})</span> 명이 이 글을 좋아합니다.
+  </p>
+  <a href="{% url 'community:detail' review.pk %}">[detail]</a>
+  <hr>
+{% endfor %}
+
+<!-- ✅ 스크립트는 루프 밖으로 이동 -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // ✅ 모든 like form 선택
+  const likeForms = document.querySelectorAll('[id^="like-form-"]');
+  
+  likeForms.forEach(formTag => {
+    formTag.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const reviewPk = this.dataset.reviewPk;
+      const likeBtn = this.querySelector('input[type=submit]');
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      
+      axios({
+        method: "POST",
+        url: `/community/${reviewPk}/like/`,
+        headers: {'X-CSRFToken': csrftoken}
+      })
+      .then((response) => {
+        const isLiked = response.data.is_liked;
+        const likeCount = response.data.like_count;
+        
+        likeBtn.value = isLiked ? '좋아요 취소' : '좋아요';
+        
+        // ✅ 좋아요 수 업데이트
+        const countSpan = document.querySelector(`#like-count-${reviewPk}`);
+        if (countSpan) {
+          countSpan.textContent = `(${likeCount})`;
+        }
+      })
+      .catch((error) => {
+        console.error('좋아요 오류:', error);
+        alert('좋아요 처리 중 오류가 발생했습니다.');
+      });
+    });
+  });
+});
+</script>
+{% endblock %}
